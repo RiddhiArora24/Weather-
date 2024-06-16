@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Forecast</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: #e0f7fa;
+        }
+        .weather-container {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            width: 90%;
+            max-width: 800px;
+            margin-top: 20px;
+        }
+        .forecast-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .day-forecast {
+            background: #f0f4c3;
+            padding: 15px;
+            margin: 10px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+            width: 100%;
+            max-width: 700px;
+            transition: background 0.3s;
+        }
+        .day-forecast:hover {
+            background: #dce775;
+        }
+        .weather-icon {
+            width: 50px;
+            height: 50px;
+        }
+        .feature {
+            color: #0288d1;
+            margin: 5px 0;
+        }
+        .error {
+            color: red;
+            margin-top: 20px;
+        }
+        .detail {
+            display: none;
+            margin-top: 10px;
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+    <div class="weather-container">
+        <h1>Weather in Varanasi</h1>
+        <div id="forecast-container" class="forecast-container"></div>
+        <p id="error-message" class="error"></p>
+    </div>
+    <script>
+        const apiKey = 'a4e166d9d57adc422b54239ba02a0460';
+        const apiUrl = `http://api.openweathermap.org/data/2.5/forecast?q=Varanasi&appid=${apiKey}&units=metric`;
+
+        fetch(apiUrl)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok ' + response.statusText);
+                }
+                return response.json();
+            })
+            .then(data => {
+                const forecastContainer = document.getElementById('forecast-container');
+                const dailyData = {};
+
+                data.list.forEach(item => {
+                    const date = new Date(item.dt * 1000);
+                    const day = date.toLocaleDateString("en-US", { weekday: 'long', day: 'numeric', month: 'short' });
+
+                    if (!dailyData[day]) {
+                        dailyData[day] = {
+                            temp: [],
+                            feels_like: [],
+                            humidity: [],
+                            wind_speed: [],
+                            weather: []
+                        };
+                    }
+
+                    dailyData[day].temp.push(item.main.temp);
+                    dailyData[day].feels_like.push(item.main.feels_like);
+                    dailyData[day].humidity.push(item.main.humidity);
+                    dailyData[day].wind_speed.push(item.wind.speed);
+                    dailyData[day].weather.push(item.weather[0]);
+                });
+
+                for (const day of Object.keys(dailyData)) {
+                    const dayData = dailyData[day];
+
+                    const avgTemp = (dayData.temp.reduce((a, b) => a + b) / dayData.temp.length).toFixed(2);
+                    const avgFeelsLike = (dayData.feels_like.reduce((a, b) => a + b) / dayData.feels_like.length).toFixed(2);
+                    const avgHumidity = (dayData.humidity.reduce((a, b) => a + b) / dayData.humidity.length).toFixed(2);
+                    const avgWindSpeed = (dayData.wind_speed.reduce((a, b) => a + b) / dayData.wind_speed.length).toFixed(2);
+                    const weatherCount = dayData.weather.reduce((acc, weather) => {
+                        acc[weather.main] = (acc[weather.main] || 0) + 1;
+                        return acc;
+                    }, {});
+                    const modeWeather = dayData.weather.sort((a, b) => weatherCount[b.main] - weatherCount[a.main])[0];
+
+                    const dayForecast = document.createElement('div');
+                    dayForecast.className = 'day-forecast';
+                    dayForecast.innerHTML = `
+                        <h3>${day}</h3>
+                        <img class="weather-icon" src="https://openweathermap.org/img/wn/${modeWeather.icon}@2x.png" alt="${modeWeather.description}">
+                        <p class="feature">${avgTemp}°C</p>
+                        <div class="detail">
+                            <p class="feature">Feels like: ${avgFeelsLike}°C</p>
+                            <p class="feature">Humidity: ${avgHumidity}%</p>
+                            <p class="feature">Wind speed: ${avgWindSpeed} m/s</p>
+                            <p class="feature">${modeWeather.description}</p>
+                        </div>
+                    `;
+                    dayForecast.addEventListener('click', () => {
+                        const detail = dayForecast.querySelector('.detail');
+                        detail.style.display = detail.style.display === 'block' ? 'none' : 'block';
+                    });
+                    forecastContainer.appendChild(dayForecast);
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching weather data:', error);
+                document.getElementById('error-message').innerText = 'Failed to load weather data. Please check your API key and try again.';
+            });
+    </script>
+</body>
+</html
